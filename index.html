@@ -1,0 +1,1303 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GIS Balangan - Peta BTS & Jaringan WiFi</title>
+    
+    <!-- Leaflet CSS & JS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background: linear-gradient(135deg, #1a2980, #26d0ce);
+            min-height: 100vh;
+            padding: 10px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 20px;
+            box-shadow: 0 15px 35px rgba(0, 0, 0, 0.3);
+            overflow: hidden;
+        }
+
+        /* Header */
+        .header {
+            background: linear-gradient(90deg, #1a2980, #26d0ce);
+            color: white;
+            padding: 20px 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 5px solid #ff9800;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo h1 {
+            font-size: 1.8rem;
+            font-weight: 700;
+        }
+
+        .logo i {
+            font-size: 2.5rem;
+            color: #ffeb3b;
+        }
+
+        .header-info {
+            display: flex;
+            gap: 20px;
+            text-align: right;
+        }
+
+        .info-box {
+            background: rgba(255, 255, 255, 0.15);
+            padding: 10px 15px;
+            border-radius: 10px;
+            backdrop-filter: blur(10px);
+        }
+
+        .info-box h3 {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .info-box .value {
+            font-size: 1.4rem;
+            font-weight: bold;
+            color: #ffeb3b;
+        }
+
+        /* Main Layout */
+        .main-content {
+            display: grid;
+            grid-template-columns: 300px 1fr 300px;
+            min-height: calc(100vh - 140px);
+        }
+
+        /* Sidebar Kiri - Filter */
+        .sidebar-left {
+            background: #f8f9fa;
+            padding: 20px;
+            border-right: 2px solid #e0e0e0;
+        }
+
+        .filter-section {
+            margin-bottom: 25px;
+        }
+
+        .filter-title {
+            color: #1a2980;
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #26d0ce;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .filter-group {
+            margin-bottom: 15px;
+        }
+
+        .filter-label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 500;
+        }
+
+        .filter-select, .filter-range {
+            width: 100%;
+            padding: 10px;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            background: white;
+            color: #333;
+            font-size: 14px;
+        }
+
+        .filter-range {
+            -webkit-appearance: none;
+            height: 8px;
+            background: #ddd;
+            border-radius: 4px;
+        }
+
+        .filter-range::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            background: #26d0ce;
+            border-radius: 50%;
+            cursor: pointer;
+        }
+
+        .checkbox-group {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+        }
+
+        .checkbox-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: #26d0ce;
+        }
+
+        .stats-box {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            border-left: 5px solid #1a2980;
+            margin-top: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        .stat-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #eee;
+        }
+
+        /* Peta Utama */
+        .map-container {
+            position: relative;
+            padding: 15px;
+            background: #e8f4f8;
+        }
+
+        #map {
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+            border: 3px solid white;
+        }
+
+        .map-controls {
+            position: absolute;
+            top: 30px;
+            right: 30px;
+            z-index: 1000;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .control-btn {
+            width: 45px;
+            height: 45px;
+            border-radius: 50%;
+            background: white;
+            border: 2px solid #26d0ce;
+            color: #1a2980;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.2);
+            transition: all 0.3s;
+        }
+
+        .control-btn:hover {
+            background: #26d0ce;
+            color: white;
+            transform: scale(1.1);
+        }
+
+        .legend {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 3px 15px rgba(0,0,0,0.2);
+            z-index: 1000;
+            width: 220px;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 10px;
+        }
+
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 4px;
+        }
+
+        /* Sidebar Kanan - Detail */
+        .sidebar-right {
+            background: #f8f9fa;
+            padding: 20px;
+            border-left: 2px solid #e0e0e0;
+        }
+
+        .detail-header {
+            background: #1a2980;
+            color: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+
+        .detail-content {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .detail-item {
+            margin-bottom: 15px;
+            padding-bottom: 15px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .detail-label {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 5px;
+        }
+
+        .detail-value {
+            color: #1a2980;
+            font-size: 1.1rem;
+            font-weight: 600;
+        }
+
+        .signal-strength {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .signal-bar {
+            height: 20px;
+            border-radius: 10px;
+            flex-grow: 1;
+            background: #e0e0e0;
+            overflow: hidden;
+        }
+
+        .signal-fill {
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+
+        /* Chart Container */
+        .chart-container {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+        }
+
+        /* Footer */
+        .footer {
+            background: #1a2980;
+            color: white;
+            padding: 15px 30px;
+            text-align: center;
+            border-top: 5px solid #ff9800;
+        }
+
+        .footer-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .main-content {
+                grid-template-columns: 250px 1fr 250px;
+            }
+        }
+
+        @media (max-width: 992px) {
+            .main-content {
+                grid-template-columns: 1fr;
+                grid-template-rows: auto 1fr auto;
+            }
+            
+            .sidebar-left, .sidebar-right {
+                border: none;
+                border-bottom: 2px solid #e0e0e0;
+            }
+            
+            .map-controls {
+                top: 20px;
+                right: 20px;
+            }
+            
+            .legend {
+                bottom: 20px;
+                left: 20px;
+            }
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+                text-align: center;
+            }
+            
+            .header-info {
+                flex-direction: column;
+                text-align: center;
+            }
+            
+            .footer-info {
+                flex-direction: column;
+            }
+        }
+
+        /* Custom Popup */
+        .leaflet-popup-content {
+            min-width: 250px;
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .popup-header {
+            background: linear-gradient(90deg, #1a2980, #26d0ce);
+            color: white;
+            padding: 10px 15px;
+            margin: -16px -16px 10px -16px;
+            border-radius: 4px 4px 0 0;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .popup-body {
+            padding: 10px 0;
+        }
+
+        .popup-item {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding-bottom: 8px;
+            border-bottom: 1px solid #eee;
+        }
+
+        .popup-label {
+            color: #666;
+            font-weight: 500;
+        }
+
+        .popup-value {
+            color: #1a2980;
+            font-weight: 600;
+        }
+
+        /* Animations */
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .loading {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.8);
+            z-index: 9999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-size: 1.5rem;
+        }
+    </style>
+</head>
+<body>
+    <!-- Loading Screen -->
+    <div class="loading" id="loading">
+        <div style="text-align: center;">
+            <i class="fas fa-spinner fa-spin fa-3x"></i>
+            <p style="margin-top: 20px;">Memuat Peta Balangan...</p>
+        </div>
+    </div>
+
+    <!-- Main Container -->
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <div class="logo">
+                <i class="fas fa-map-marked-alt"></i>
+                <div>
+                    <h1>GIS BALANGAN</h1>
+                    <p style="font-size: 0.9rem; opacity: 0.9;">Sistem Informasi Geografis BTS & Jaringan WiFi</p>
+                </div>
+            </div>
+            <div class="header-info">
+                <div class="info-box">
+                    <h3>Total BTS</h3>
+                    <div class="value" id="total-bts">0</div>
+                </div>
+                <div class="info-box">
+                    <h3>WiFi Gratis</h3>
+                    <div class="value" id="total-wifi">0</div>
+                </div>
+                <div class="info-box">
+                    <h3>Kekuatan Sinyal</h3>
+                    <div class="value" id="avg-signal">0%</div>
+                </div>
+            </div>
+        </header>
+
+        <!-- Main Content -->
+        <div class="main-content">
+            <!-- Sidebar Kiri - Filter -->
+            <aside class="sidebar-left">
+                <div class="filter-section">
+                    <h3 class="filter-title"><i class="fas fa-filter"></i> FILTER PETA</h3>
+                    
+                    <div class="filter-group">
+                        <label class="filter-label">Tipe Jaringan:</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="filter-bts" checked>
+                                <span>Menara BTS</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="filter-wifi" checked>
+                                <span>WiFi Gratis</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="filter-4g">
+                                <span>Jaringan 4G</span>
+                            </label>
+                            <label class="checkbox-item">
+                                <input type="checkbox" id="filter-5g">
+                                <span>Jaringan 5G</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Operator:</label>
+                        <select class="filter-select" id="filter-operator">
+                            <option value="all">Semua Operator</option>
+                            <option value="telkomsel">Telkomsel</option>
+                            <option value="indosat">Indosat</option>
+                            <option value="xl">XL Axiata</option>
+                            <option value="smartfren">Smartfren</option>
+                        </select>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Kekuatan Sinyal:</label>
+                        <input type="range" class="filter-range" id="filter-signal" min="0" max="100" value="0">
+                        <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                            <span>0%</span>
+                            <span id="signal-value">Min: 0%</span>
+                            <span>100%</span>
+                        </div>
+                    </div>
+
+                    <div class="filter-group">
+                        <label class="filter-label">Kecamatan:</label>
+                        <select class="filter-select" id="filter-kecamatan">
+                            <option value="all">Semua Kecamatan</option>
+                            <option value="paringin">Paringin</option>
+                            <option value="paringin-selatan">Paringin Selatan</option>
+                            <option value="tebing-tinggi">Tebing Tinggi</option>
+                            <option value="lampihong">Lampihong</option>
+                            <option value="batumandi">Batumandi</option>
+                            <option value="juai">Juai</option>
+                            <option value="awayan">Awayan</option>
+                            <option value="halong">Halong</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Statistik -->
+                <div class="stats-box">
+                    <h3 class="filter-title"><i class="fas fa-chart-bar"></i> STATISTIK</h3>
+                    <div class="stat-item">
+                        <span>Total Titik:</span>
+                        <span id="stat-total">0</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Sinyal Terkuat:</span>
+                        <span id="stat-strongest">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Area Terbanyak:</span>
+                        <span id="stat-area">-</span>
+                    </div>
+                    <div class="stat-item">
+                        <span>Update Terakhir:</span>
+                        <span id="stat-update">Hari ini</span>
+                    </div>
+                </div>
+
+                <button class="btn btn-primary w-100 mt-3" style="background: #26d0ce; border: none; padding: 12px;" onclick="refreshData()">
+                    <i class="fas fa-sync-alt"></i> Refresh Data
+                </button>
+            </aside>
+
+            <!-- Peta Utama -->
+            <main class="map-container">
+                <div id="map"></div>
+                
+                <!-- Map Controls -->
+                <div class="map-controls">
+                    <button class="control-btn" onclick="zoomIn()" title="Zoom In">
+                        <i class="fas fa-search-plus"></i>
+                    </button>
+                    <button class="control-btn" onclick="zoomOut()" title="Zoom Out">
+                        <i class="fas fa-search-minus"></i>
+                    </button>
+                    <button class="control-btn" onclick="locateUser()" title="Lokasi Saya">
+                        <i class="fas fa-location-crosshairs"></i>
+                    </button>
+                    <button class="control-btn" onclick="resetView()" title="Reset Peta">
+                        <i class="fas fa-home"></i>
+                    </button>
+                    <button class="control-btn" onclick="toggleLegend()" title="Toggle Legend">
+                        <i class="fas fa-layer-group"></i>
+                    </button>
+                </div>
+
+                <!-- Legend -->
+                <div class="legend" id="legend">
+                    <h4 style="margin-bottom: 15px; color: #1a2980;"><i class="fas fa-key"></i> LEGENDA</h4>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff4444;"></div>
+                        <span>BTS (Sinyal Kuat)</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #44ff44;"></div>
+                        <span>WiFi Gratis</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #4444ff;"></div>
+                        <span>Jaringan 4G</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ff44ff;"></div>
+                        <span>Jaringan 5G</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #ffaa00;"></div>
+                        <span>Sinyal Sedang</span>
+                    </div>
+                    <div class="legend-item">
+                        <div class="legend-color" style="background: #aaa;"></div>
+                        <span>Sinyal Lemah</span>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Sidebar Kanan - Detail -->
+            <aside class="sidebar-right">
+                <div class="detail-header">
+                    <h3><i class="fas fa-info-circle"></i> DETAIL LOKASI</h3>
+                    <p id="detail-title">Pilih titik pada peta</p>
+                </div>
+
+                <div class="detail-content">
+                    <div class="detail-item">
+                        <div class="detail-label">Nama Lokasi:</div>
+                        <div class="detail-value" id="detail-name">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Tipe Jaringan:</div>
+                        <div class="detail-value" id="detail-type">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Operator:</div>
+                        <div class="detail-value" id="detail-operator">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Kecamatan:</div>
+                        <div class="detail-value" id="detail-kecamatan">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Alamat:</div>
+                        <div class="detail-value" id="detail-address">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Kekuatan Sinyal:</div>
+                        <div class="detail-value" id="detail-signal">-</div>
+                        <div class="signal-strength">
+                            <span id="signal-percent">0%</span>
+                            <div class="signal-bar">
+                                <div class="signal-fill" id="signal-fill" style="width: 0%; background: #ff4444;"></div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Frekuensi:</div>
+                        <div class="detail-value" id="detail-frequency">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Status:</div>
+                        <div class="detail-value" id="detail-status">-</div>
+                    </div>
+                    
+                    <div class="detail-item">
+                        <div class="detail-label">Terakhir Update:</div>
+                        <div class="detail-value" id="detail-updated">-</div>
+                    </div>
+                </div>
+
+                <!-- Chart -->
+                <div class="chart-container">
+                    <h4 style="color: #1a2980; margin-bottom: 15px;"><i class="fas fa-chart-line"></i> DISTRIBUSI SINYAL</h4>
+                    <canvas id="signalChart" height="200"></canvas>
+                </div>
+            </aside>
+        </div>
+
+        <!-- Footer -->
+        <footer class="footer">
+            <div class="footer-info">
+                <div>
+                    <h4><i class="fas fa-map-marker-alt"></i> Kabupaten Balangan, Kalimantan Selatan</h4>
+                    <p>Koordinat: -2.4235° S, 115.2488° E</p>
+                </div>
+                <div>
+                    <p><i class="fas fa-wifi"></i> Total Jaringan: <span id="footer-total">0</span> titik</p>
+                    <p><i class="fas fa-broadcast-tower"></i> Update Real-time GIS</p>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-light me-2" onclick="exportData()">
+                        <i class="fas fa-download"></i> Export Data
+                    </button>
+                    <button class="btn btn-sm btn-warning" onclick="reportIssue()">
+                        <i class="fas fa-flag"></i> Laporkan Masalah
+                    </button>
+                </div>
+            </div>
+            <p style="margin-top: 15px; opacity: 0.8; font-size: 0.9rem;">
+                © 2024 Dinas Komunikasi dan Informatika Kabupaten Balangan | Sistem GIS BTS & WiFi
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // ============================
+        // VARIABLES & CONFIGURATION
+        // ============================
+        let map;
+        let markers = [];
+        let signalChart;
+        let allData = [];
+        
+        // Koordinat Kabupaten Balangan
+        const BALANGAN_CENTER = [-2.4235, 115.2488];
+        const ZOOM_LEVEL = 12;
+        
+        // Data BTS & WiFi (Simulasi)
+        const NETWORK_DATA = [
+            // BTS Telkomsel - Sinyal Kuat
+            { id: 1, name: "BTS Telkomsel Paringin", type: "bts", operator: "telkomsel", 
+              lat: -2.4235, lng: 115.2488, kecamatan: "paringin", 
+              address: "Jl. A. Yani No. 1, Paringin", signal: 95, frequency: "1800 MHz",
+              status: "Aktif", updated: "2024-01-15", technology: "4G" },
+            
+            // BTS Indosat
+            { id: 2, name: "BTS Indosat Batumandi", type: "bts", operator: "indosat",
+              lat: -2.3889, lng: 115.2765, kecamatan: "batumandi",
+              address: "Jl. Merdeka No. 45, Batumandi", signal: 85, frequency: "2100 MHz",
+              status: "Aktif", updated: "2024-01-14", technology: "4G" },
+            
+            // WiFi Gratis - Paringin
+            { id: 3, name: "WiFi Gratis Kantor Bupati", type: "wifi", operator: "pemkab",
+              lat: -2.4280, lng: 115.2520, kecamatan: "paringin",
+              address: "Kantor Bupati Balangan", signal: 90, frequency: "2.4 GHz",
+              status: "Aktif", updated: "2024-01-16", technology: "WiFi" },
+            
+            // BTS XL Axiata
+            { id: 4, name: "BTS XL Lampihong", type: "bts", operator: "xl",
+              lat: -2.5012, lng: 115.3123, kecamatan: "lampihong",
+              address: "Desa Lampihong Selatan", signal: 75, frequency: "900 MHz",
+              status: "Aktif", updated: "2024-01-13", technology: "4G" },
+            
+            // WiFi Gratis - Pasar
+            { id: 5, name: "WiFi Pasar Paringin", type: "wifi", operator: "pemkab",
+              lat: -2.4301, lng: 115.2502, kecamatan: "paringin",
+              address: "Pasar Induk Paringin", signal: 80, frequency: "5 GHz",
+              status: "Aktif", updated: "2024-01-15", technology: "WiFi" },
+            
+            // BTS Smartfren
+            { id: 6, name: "BTS Smartfren Juai", type: "bts", operator: "smartfren",
+              lat: -2.3521, lng: 115.4123, kecamatan: "juai",
+              address: "Jl. Trans Kalimantan, Juai", signal: 65, frequency: "850 MHz",
+              status: "Aktif", updated: "2024-01-12", technology: "4G" },
+            
+            // WiFi Gratis - Puskesmas
+            { id: 7, name: "WiFi Puskesmas Batumandi", type: "wifi", operator: "dinkes",
+              lat: -2.3900, lng: 115.2800, kecamatan: "batumandi",
+              address: "Puskesmas Batumandi", signal: 70, frequency: "2.4 GHz",
+              status: "Aktif", updated: "2024-01-14", technology: "WiFi" },
+            
+            // BTS 5G Telkomsel
+            { id: 8, name: "BTS 5G Telkomsel Halong", type: "bts", operator: "telkomsel",
+              lat: -2.5018, lng: 115.1987, kecamatan: "halong",
+              address: "Desa Halong, Kec. Halong", signal: 88, frequency: "3500 MHz",
+              status: "Aktif", updated: "2024-01-16", technology: "5G" },
+            
+            // WiFi Gratis - Sekolah
+            { id: 9, name: "WiFi SMAN 1 Paringin", type: "wifi", operator: "diknas",
+              lat: -2.4250, lng: 115.2550, kecamatan: "paringin",
+              address: "SMAN 1 Paringin", signal: 85, frequency: "5 GHz",
+              status: "Aktif", updated: "2024-01-13", technology: "WiFi" },
+            
+            // BTS Awayan
+            { id: 10, name: "BTS Indosat Awayan", type: "bts", operator: "indosat",
+              lat: -2.5123, lng: 115.0987, kecamatan: "awayan",
+              address: "Kecamatan Awayan", signal: 60, frequency: "2100 MHz",
+              status: "Aktif", updated: "2024-01-11", technology: "3G" },
+            
+            // WiFi Gratis - Tebing Tinggi
+            { id: 11, name: "WiFi Kantor Camat Tebing Tinggi", type: "wifi", operator: "pemkab",
+              lat: -2.4567, lng: 115.3456, kecamatan: "tebing-tinggi",
+              address: "Kantor Camat Tebing Tinggi", signal: 75, frequency: "2.4 GHz",
+              status: "Aktif", updated: "2024-01-15", technology: "WiFi" },
+            
+            // BTS Paringin Selatan
+            { id: 12, name: "BTS XL Paringin Selatan", type: "bts", operator: "xl",
+              lat: -2.4678, lng: 115.2678, kecamatan: "paringin-selatan",
+              address: "Desa Paringin Selatan", signal: 82, frequency: "1800 MHz",
+              status: "Aktif", updated: "2024-01-14", technology: "4G" }
+        ];
+
+        // ============================
+        // FUNGSI INISIALISASI
+        // ============================
+        function initMap() {
+            // Inisialisasi peta
+            map = L.map('map').setView(BALANGAN_CENTER, ZOOM_LEVEL);
+            
+            // Tambahkan tile layer (OpenStreetMap)
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: '© OpenStreetMap contributors',
+                maxZoom: 18
+            }).addTo(map);
+            
+            // Tambahkan custom tile untuk detail lebih baik
+            L.tileLayer('https://{s}.tile.opentopomap.org/{z}/{x}/{y}.png', {
+                maxZoom: 17,
+                attribution: '© OpenTopoMap'
+            }).addTo(map);
+            
+            // Inisialisasi data
+            allData = [...NETWORK_DATA];
+            updateStats();
+            loadMarkers();
+            initChart();
+            
+            // Sembunyikan loading screen
+            setTimeout(() => {
+                document.getElementById('loading').style.display = 'none';
+            }, 1000);
+            
+            // Event listeners untuk filter
+            document.getElementById('filter-signal').addEventListener('input', filterData);
+            document.getElementById('filter-operator').addEventListener('change', filterData);
+            document.getElementById('filter-kecamatan').addEventListener('change', filterData);
+            document.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                checkbox.addEventListener('change', filterData);
+            });
+            
+            // Tampilkan detail pertama kali
+            showDetail(allData[0]);
+        }
+
+        // ============================
+        // FUNGSI MARKER & PETA
+        // ============================
+        function loadMarkers() {
+            // Hapus marker lama
+            markers.forEach(marker => map.removeLayer(marker));
+            markers = [];
+            
+            // Tambahkan marker baru
+            allData.forEach(item => {
+                const marker = createMarker(item);
+                marker.addTo(map);
+                markers.push(marker);
+            });
+            
+            updateStats();
+        }
+
+        function createMarker(data) {
+            // Tentukan warna berdasarkan tipe dan sinyal
+            let iconColor;
+            if (data.type === 'bts') {
+                if (data.signal >= 80) iconColor = '#ff4444';
+                else if (data.signal >= 50) iconColor = '#ffaa00';
+                else iconColor = '#aaaaaa';
+            } else if (data.type === 'wifi') {
+                iconColor = '#44ff44';
+            }
+            
+            // Buat icon kustom
+            const icon = L.divIcon({
+                className: 'custom-marker',
+                html: `<div style="
+                    background: ${iconColor};
+                    width: 24px;
+                    height: 24px;
+                    border-radius: 50%;
+                    border: 3px solid white;
+                    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                    display: flex;
+                    align-items: center;
+                    justify-content: center;
+                    color: white;
+                    font-size: 12px;
+                    font-weight: bold;
+                ">
+                    ${data.type === 'bts' ? '📡' : '📶'}
+                </div>`,
+                iconSize: [30, 30],
+                iconAnchor: [15, 15]
+            });
+            
+            // Buat marker
+            const marker = L.marker([data.lat, data.lng], { icon: icon });
+            
+            // Tambahkan popup
+            marker.bindPopup(`
+                <div class="popup-header">
+                    <i class="fas fa-${data.type === 'bts' ? 'broadcast-tower' : 'wifi'}"></i>
+                    <strong>${data.name}</strong>
+                </div>
+                <div class="popup-body">
+                    <div class="popup-item">
+                        <span class="popup-label">Operator:</span>
+                        <span class="popup-value">${getOperatorName(data.operator)}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label">Kecamatan:</span>
+                        <span class="popup-value">${formatKecamatan(data.kecamatan)}</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label">Sinyal:</span>
+                        <span class="popup-value">${data.signal}%</span>
+                    </div>
+                    <div class="popup-item">
+                        <span class="popup-label">Status:</span>
+                        <span class="popup-value" style="color: ${data.status === 'Aktif' ? 'green' : 'red'}">
+                            ${data.status}
+                        </span>
+                    </div>
+                    <button onclick="showDetail(${data.id})" 
+                            style="width:100%; margin-top:10px; padding:5px; background:#26d0ce; color:white; border:none; border-radius:5px; cursor:pointer;">
+                        <i class="fas fa-info-circle"></i> Detail Lengkap
+                    </button>
+                </div>
+            `);
+            
+            // Event click untuk marker
+            marker.on('click', function() {
+                showDetail(data.id);
+            });
+            
+            return marker;
+        }
+
+        // ============================
+        // FUNGSI FILTER
+        // ============================
+        function filterData() {
+            const showBTS = document.getElementById('filter-bts').checked;
+            const showWifi = document.getElementById('filter-wifi').checked;
+            const show4G = document.getElementById('filter-4g').checked;
+            const show5G = document.getElementById('filter-5g').checked;
+            const operator = document.getElementById('filter-operator').value;
+            const kecamatan = document.getElementById('filter-kecamatan').value;
+            const minSignal = parseInt(document.getElementById('filter-signal').value);
+            
+            // Update tampilan nilai signal
+            document.getElementById('signal-value').textContent = `Min: ${minSignal}%`;
+            
+            // Filter data
+            const filtered = NETWORK_DATA.filter(item => {
+                // Filter berdasarkan tipe
+                if (item.type === 'bts' && !showBTS) return false;
+                if (item.type === 'wifi' && !showWifi) return false;
+                
+                // Filter berdasarkan teknologi
+                if (item.technology === '4G' && !show4G) return false;
+                if (item.technology === '5G' && !show5G) return false;
+                
+                // Filter berdasarkan operator
+                if (operator !== 'all' && item.operator !== operator) return false;
+                
+                // Filter berdasarkan kecamatan
+                if (kecamatan !== 'all' && item.kecamatan !== kecamatan) return false;
+                
+                // Filter berdasarkan sinyal
+                if (item.signal < minSignal) return false;
+                
+                return true;
+            });
+            
+            allData = filtered;
+            loadMarkers();
+            updateStats();
+        }
+
+        // ============================
+        // FUNGSI DETAIL & CHART
+        // ============================
+        function showDetail(itemId) {
+            // Jika parameter adalah ID, cari data
+            let data;
+            if (typeof itemId === 'number') {
+                data = NETWORK_DATA.find(item => item.id === itemId);
+            } else {
+                data = itemId;
+            }
+            
+            if (!data) return;
+            
+            // Update detail panel
+            document.getElementById('detail-title').textContent = data.name;
+            document.getElementById('detail-name').textContent = data.name;
+            document.getElementById('detail-type').textContent = 
+                data.type === 'bts' ? 'Menara BTS' : 'WiFi Gratis';
+            document.getElementById('detail-operator').textContent = getOperatorName(data.operator);
+            document.getElementById('detail-kecamatan').textContent = formatKecamatan(data.kecamatan);
+            document.getElementById('detail-address').textContent = data.address;
+            document.getElementById('detail-signal').textContent = `${data.signal}%`;
+            document.getElementById('detail-frequency').textContent = data.frequency;
+            document.getElementById('detail-status').textContent = data.status;
+            document.getElementById('detail-updated').textContent = data.updated;
+            
+            // Update signal bar
+            const signalPercent = data.signal;
+            const signalFill = document.getElementById('signal-fill');
+            signalFill.style.width = `${signalPercent}%`;
+            
+            // Warna berdasarkan kekuatan sinyal
+            if (signalPercent >= 80) signalFill.style.background = '#44ff44';
+            else if (signalPercent >= 50) signalFill.style.background = '#ffaa00';
+            else signalFill.style.background = '#ff4444';
+            
+            document.getElementById('signal-percent').textContent = `${signalPercent}%`;
+            
+            // Update chart
+            updateChart();
+            
+            // Zoom ke lokasi
+            map.setView([data.lat, data.lng], 15);
+            
+            // Open popup jika ada marker
+            markers.forEach(marker => {
+                const latlng = marker.getLatLng();
+                if (latlng.lat === data.lat && latlng.lng === data.lng) {
+                    marker.openPopup();
+                }
+            });
+        }
+
+        function initChart() {
+            const ctx = document.getElementById('signalChart').getContext('2d');
+            signalChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['Sangat Kuat', 'Kuat', 'Sedang', 'Lemah', 'Sangat Lemah'],
+                    datasets: [{
+                        label: 'Jumlah Titik',
+                        data: [0, 0, 0, 0, 0],
+                        backgroundColor: [
+                            '#44ff44',
+                            '#88ff88',
+                            '#ffff88',
+                            '#ffaa88',
+                            '#ff8888'
+                        ]
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            display: false
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                stepSize: 1
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateChart() {
+            // Kategorikan data berdasarkan kekuatan sinyal
+            const categories = {
+                'Sangat Kuat': allData.filter(d => d.signal >= 90).length,
+                'Kuat': allData.filter(d => d.signal >= 75 && d.signal < 90).length,
+                'Sedang': allData.filter(d => d.signal >= 50 && d.signal < 75).length,
+                'Lemah': allData.filter(d => d.signal >= 25 && d.signal < 50).length,
+                'Sangat Lemah': allData.filter(d => d.signal < 25).length
+            };
+            
+            if (signalChart) {
+                signalChart.data.datasets[0].data = Object.values(categories);
+                signalChart.update();
+            }
+        }
+
+        // ============================
+        // FUNGSI UTILITAS
+        // ============================
+        function updateStats() {
+            const totalBTS = allData.filter(d => d.type === 'bts').length;
+            const totalWifi = allData.filter(d => d.type === 'wifi').length;
+            const avgSignal = allData.length > 0 
+                ? Math.round(allData.reduce((sum, d) => sum + d.signal, 0) / allData.length)
+                : 0;
+            
+            // Update header
+            document.getElementById('total-bts').textContent = totalBTS;
+            document.getElementById('total-wifi').textContent = totalWifi;
+            document.getElementById('avg-signal').textContent = `${avgSignal}%`;
+            
+            // Update footer
+            document.getElementById('footer-total').textContent = allData.length;
+            
+            // Update sidebar stats
+            document.getElementById('stat-total').textContent = allData.length;
+            
+            // Cari sinyal terkuat
+            if (allData.length > 0) {
+                const strongest = allData.reduce((max, d) => d.signal > max.signal ? d : max);
+                document.getElementById('stat-strongest').textContent = `${strongest.signal}% (${strongest.name.substring(0, 15)}...)`;
+                
+                // Cari kecamatan dengan titik terbanyak
+                const kecamatanCount = {};
+                allData.forEach(d => {
+                    kecamatanCount[d.kecamatan] = (kecamatanCount[d.kecamatan] || 0) + 1;
+                });
+                const mostArea = Object.keys(kecamatanCount).reduce((a, b) => 
+                    kecamatanCount[a] > kecamatanCount[b] ? a : b
+                );
+                document.getElementById('stat-area').textContent = formatKecamatan(mostArea);
+            }
+        }
+
+        function getOperatorName(code) {
+            const operators = {
+                'telkomsel': 'Telkomsel',
+                'indosat': 'Indosat Ooredoo',
+                'xl': 'XL Axiata',
+                'smartfren': 'Smartfren',
+                'pemkab': 'Pemkab Balangan',
+                'dinkes': 'Dinas Kesehatan',
+                'diknas': 'Dinas Pendidikan'
+            };
+            return operators[code] || code;
+        }
+
+        function formatKecamatan(code) {
+            const kecamatans = {
+                'paringin': 'Paringin',
+                'paringin-selatan': 'Paringin Selatan',
+                'tebing-tinggi': 'Tebing Tinggi',
+                'lampihong': 'Lampihong',
+                'batumandi': 'Batumandi',
+                'juai': 'Juai',
+                'awayan': 'Awayan',
+                'halong': 'Halong'
+            };
+            return kecamatans[code] || code;
+        }
+
+        // ============================
+        // FUNGSI KONTROL PETA
+        // ============================
+        function zoomIn() {
+            map.zoomIn();
+        }
+
+        function zoomOut() {
+            map.zoomOut();
+        }
+
+        function locateUser() {
+            if (navigator.geolocation) {
+                navigator.geolocation.getCurrentPosition(position => {
+                    const userLat = position.coords.latitude;
+                    const userLng = position.coords.longitude;
+                    
+                    // Tambahkan marker untuk user
+                    const userIcon = L.divIcon({
+                        className: 'user-marker',
+                        html: '<div style="background:#26d0ce; width:20px; height:20px; border-radius:50%; border:3px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.3);"></div>',
+                        iconSize: [26, 26]
+                    });
+                    
+                    L.marker([userLat, userLng], { icon: userIcon })
+                        .addTo(map)
+                        .bindPopup('<b>Lokasi Anda</b><br>Koordinat: ' + userLat.toFixed(4) + ', ' + userLng.toFixed(4))
+                        .openPopup();
+                    
+                    // Zoom ke lokasi user
+                    map.setView([userLat, userLng], 15);
+                }, () => {
+                    alert('Tidak dapat mengakses lokasi. Pastikan GPS diaktifkan.');
+                });
+            } else {
+                alert('Browser tidak mendukung geolocation.');
+            }
+        }
+
+        function resetView() {
+            map.setView(BALANGAN_CENTER, ZOOM_LEVEL);
+            filterData();
+        }
+
+        function toggleLegend() {
+            const legend = document.getElementById('legend');
+            legend.style.display = legend.style.display === 'none' ? 'block' : 'none';
+        }
+
+        function refreshData() {
+            document.getElementById('loading').style.display = 'flex';
+            
+            // Simulasi loading data baru
+            setTimeout(() => {
+                // Tambah data baru (simulasi)
+                const newId = allData.length + 1;
+                const newData = {
+                    id: newId,
+                    name: `BTS Baru ${newId}`,
+                    type: 'bts',
+                    operator: ['telkomsel', 'indosat', 'xl'][Math.floor(Math.random() * 3)],
+                    lat: BALANGAN_CENTER[0] + (Math.random() - 0.5) * 0.1,
+                    lng: BALANGAN_CENTER[1] + (Math.random() - 0.5) * 0.1,
+                    kecamatan: Object.keys({
+                        'paringin': 'Paringin',
+                        'batumandi': 'Batumandi',
+                        'lampihong': 'Lampihong'
+                    })[Math.floor(Math.random() * 3)],
+                    address: `Lokasi baru ${newId}`,
+                    signal: Math.floor(Math.random() * 100),
+                    frequency: '1800 MHz',
+                    status: 'Aktif',
+                    updated: new Date().toISOString().split('T')[0],
+                    technology: '4G'
+                };
+                
+                NETWORK_DATA.push(newData);
+                allData = [...NETWORK_DATA];
+                loadMarkers();
+                
+                document.getElementById('loading').style.display = 'none';
+                alert(`Data diperbarui! ${newData.name} ditambahkan.`);
+            }, 1500);
+        }
+
+        function exportData() {
+            const dataStr = JSON.stringify(allData, null, 2);
+            const dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+            
+            const exportFileDefaultName = `gis-balangan-${new Date().toISOString().split('T')[0]}.json`;
+            
+            const linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            linkElement.click();
+        }
+
+        function reportIssue() {
+            const issue = prompt('Laporkan masalah jaringan (BTS/WiFi tidak berfungsi, sinyal lemah, dll):');
+            if (issue && issue.trim() !== '') {
+                alert('Laporan diterima! Terima kasih atas kontribusinya.\nLaporan: ' + issue);
+                // Di sini bisa dikirim ke server
+            }
+        }
+
+        // ============================
+        // INISIALISASI SAAT HALAMAN LOAD
+        // ============================
+        window.onload = function() {
+            initMap();
+            
+            // Tampilkan detail pertama
+            setTimeout(() => {
+                if (NETWORK_DATA.length > 0) {
+                    showDetail(NETWORK_DATA[0]);
+                }
+            }, 500);
+        };
+    </script>
+</body>
+</html>
